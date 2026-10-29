@@ -50,7 +50,7 @@ export const DEFAULT_TEXT_STYLES: TextStyles = { label: DEFAULT_STYLE, value: DE
 /** Tag next to the header in remaining mode: 残, Left, or none. */
 export type RemainTag = "zan" | "left" | "off";
 
-/** Bar colors for the three usage levels (below 70%, 70-89%, 90% and up). */
+/** Bar colors for the three levels: used mode below 70% / 70-89% / 90% and up; remaining mode over 50% / 25-50% / 25% or less left. */
 export interface BarColors {
 	normal: string;
 	warn: string;
@@ -88,7 +88,14 @@ export const COLORS = {
 export const DEFAULT_BAR_COLORS: BarColors = { normal: COLORS.claude, warn: COLORS.warn, danger: COLORS.danger };
 
 /** Bar/accent color for a given used percentage: Claude orange while there is headroom, then amber, then red. */
-export function levelColor(utilization: number, colors: BarColors = DEFAULT_BAR_COLORS): string {
+export function levelColor(utilization: number, colors: BarColors = DEFAULT_BAR_COLORS, mode: ValueMode = "used"): string {
+	if (mode === "remaining") {
+		// Judged on the number shown on the key, so a bar never disagrees with its own percentage.
+		const left = Math.round(100 - utilization);
+		if (left <= 25) return colors.danger;
+		if (left <= 50) return colors.warn;
+		return colors.normal;
+	}
 	if (utilization >= 90) return colors.danger;
 	if (utilization >= 70) return colors.warn;
 	return colors.normal;
@@ -182,10 +189,10 @@ function colorsFor(opts: RenderOptions, which: "session" | "week"): BarColors {
 	return opts.barColors?.[which] ?? DEFAULT_BAR_COLORS;
 }
 
-function thinBar(y: number, h: number, win: LimitWindow, value: number, colors: BarColors): string {
+function thinBar(y: number, h: number, win: LimitWindow, value: number, colors: BarColors, mode: ValueMode): string {
 	return (
 		`<rect x="${LEFT}" y="${y}" width="${WIDTH}" height="${h}" rx="${h / 2}" fill="${COLORS.track}"/>` +
-		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization, colors))
+		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization, colors, mode))
 	);
 }
 
@@ -193,14 +200,14 @@ function thinBar(y: number, h: number, win: LimitWindow, value: number, colors: 
 function renderSingle(which: "session" | "week", label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
 	const st = stylesOf(opts);
 	// Sized so "Session" still clears the tag at the right edge ("Left" is wider than 残, so the label gives up a pixel).
-	const labelSize = opts.valueMode === "remaining" && opts.remainTag === "left" ? 17 : 18;
+	const labelSize = opts.valueMode === "remaining" && (opts.remainTag ?? "left") === "left" ? 17 : 18;
 	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(st.label, LEFT + 20, 29, labelSize, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
 	if (!win) return head + text(st.value, 72, 84, 40, COLORS.muted, "--", "middle");
 	const value = shownValue(win, opts.valueMode);
 	return (
 		head +
 		text(st.value, 72, 78, 46, COLORS.text, `${value}<tspan font-size="${px(st.value, 26)}" fill="${COLORS.muted}">%</tspan>`, "middle") +
-		thinBar(89, 9, win, value, colorsFor(opts, which)) +
+		thinBar(89, 9, win, value, colorsFor(opts, which), opts.valueMode) +
 		text(st.countdown, 72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
 	);
 }
@@ -218,7 +225,7 @@ function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptio
 			// "100" is a digit wider; shrink it so it never runs into the countdown.
 			text(st.value, LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${px(st.value, value >= 100 ? 12 : 17)}" fill="${COLORS.muted}">%</tspan>`) +
 			text(st.countdown, RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
-			thinBar(y + 51, 7, win, value, colorsFor(opts, which))
+			thinBar(y + 51, 7, win, value, colorsFor(opts, which), opts.valueMode)
 		);
 	};
 	return modeTag(22, 15, opts) + row(7, "session", "Session", true, view.session) + row(67, "week", "Week", false, view.week);
