@@ -46,6 +46,7 @@ const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMo
 	{ title: "バーの色: カスタム", view: sample(84, 46), metric: "both", barColors: customBars },
 	{ title: "バーの色: カスタム Session", view: sample(16, 46), metric: "session", barColors: customBars },
 	{ title: "バーの色: カスタム Week", view: sample(16, 46), metric: "week", barColors: customBars },
+	{ title: "バーの色: カスタム 残量表示", view: sample(95, 78), metric: "both", valueMode: "remaining", barColors: customBars },
 	{ title: "要ログイン", view: { kind: "message", title: "要ログイン", detail: "claude で再認証" }, metric: "session" },
 ];
 

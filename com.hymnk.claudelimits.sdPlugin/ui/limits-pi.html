@@ -42,11 +42,18 @@
 	<h2>文字の見た目</h2>
 	<div id="textRows"></div>
 	<div class="row"><label></label><button id="resetText" type="button">標準に戻す</button></div>
-	<h2>バーの色</h2>
+	<h2 id="colorsTitle">バーの色</h2>
 	<div class="row colors"><label></label><span>Session</span><span>Week</span></div>
-	<div class="row colors"><label>70%未満</label><input type="color" id="sessionBarNormal" /><input type="color" id="weekBarNormal" /></div>
-	<div class="row colors"><label>70%以上</label><input type="color" id="sessionBarWarn" /><input type="color" id="weekBarWarn" /></div>
-	<div class="row colors"><label>90%以上</label><input type="color" id="sessionBarDanger" /><input type="color" id="weekBarDanger" /></div>
+	<div id="colorsUsed">
+		<div class="row colors"><label>70%未満</label><input type="color" id="sessionBarNormal" /><input type="color" id="weekBarNormal" /></div>
+		<div class="row colors"><label>70%以上</label><input type="color" id="sessionBarWarn" /><input type="color" id="weekBarWarn" /></div>
+		<div class="row colors"><label>90%以上</label><input type="color" id="sessionBarDanger" /><input type="color" id="weekBarDanger" /></div>
+	</div>
+	<div id="colorsRemain" hidden>
+		<div class="row colors"><label>30%超</label><input type="color" id="sessionRemainBarNormal" /><input type="color" id="weekRemainBarNormal" /></div>
+		<div class="row colors"><label>30%以下</label><input type="color" id="sessionRemainBarWarn" /><input type="color" id="weekRemainBarWarn" /></div>
+		<div class="row colors"><label>10%以下</label><input type="color" id="sessionRemainBarDanger" /><input type="color" id="weekRemainBarDanger" /></div>
+	</div>
 	<div class="row"><label></label><button id="resetColors" type="button">標準に戻す</button></div>
 	<div class="note">
 		Claude Code のログイン情報(~/.claude/.credentials.json)を使って5分ごとに取得します。キーを押すとすぐ更新します。<br />
@@ -83,7 +90,10 @@
 		// Bar colors per window and usage level; must match DEFAULT_BAR_COLORS in src/render.ts.
 		const BAR_DEFAULTS = { Normal: "#d97757", Warn: "#e8a33d", Danger: "#ef574a" };
 		for (const which of ["session", "week"]) {
-			for (const level of Object.keys(BAR_DEFAULTS)) DEFAULTS[which + "Bar" + level] = BAR_DEFAULTS[level];
+			for (const level of Object.keys(BAR_DEFAULTS)) {
+				DEFAULTS[which + "Bar" + level] = BAR_DEFAULTS[level];
+				DEFAULTS[which + "RemainBar" + level] = BAR_DEFAULTS[level];
+			}
 		}
 		const FIELDS = Object.keys(DEFAULTS);
 
@@ -118,8 +128,24 @@
 					if (!settings[which + "Bar" + level]) settings[which + "Bar" + level] = legacy;
 				}
 			}
+			// Remaining-mode colors start out as a copy of the used-mode ones until they are set on their own.
+			for (const which of ["session", "week"]) {
+				for (const level of Object.keys(BAR_DEFAULTS)) {
+					const own = which + "RemainBar" + level;
+					if (!settings[own] && settings[which + "Bar" + level]) settings[own] = settings[which + "Bar" + level];
+				}
+			}
 			settings = Object.assign({}, DEFAULTS, settings);
 			for (const field of FIELDS) document.getElementById(field).value = settings[field];
+			showColorGrid();
+		}
+
+		// The color grid on screen is the one for the current display mode, with thresholds worded for that mode.
+		function showColorGrid() {
+			const remaining = document.getElementById("valueMode").value === "remaining";
+			document.getElementById("colorsUsed").hidden = remaining;
+			document.getElementById("colorsRemain").hidden = !remaining;
+			document.getElementById("colorsTitle").textContent = remaining ? "バーの色(残量表示のとき)" : "バーの色(使用率表示のとき)";
 		}
 
 		function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
@@ -150,6 +176,7 @@
 			}
 
 			for (const field of FIELDS) document.getElementById(field).addEventListener("change", save);
+			document.getElementById("valueMode").addEventListener("change", showColorGrid);
 			function resetFields(match) {
 				for (const field of FIELDS) {
 					if (match(field)) document.getElementById(field).value = DEFAULTS[field];
@@ -160,7 +187,8 @@
 				resetFields((field) => field.endsWith("Font") || field.endsWith("Size"));
 			});
 			document.getElementById("resetColors").addEventListener("click", function () {
-				resetFields((field) => field.includes("Bar"));
+				const remaining = document.getElementById("valueMode").value === "remaining";
+				resetFields((field) => (remaining ? field.includes("RemainBar") : field.includes("Bar") && !field.includes("RemainBar")));
 			});
 		}
 	</script>

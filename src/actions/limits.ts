@@ -21,13 +21,19 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const LEVELS = ["Normal", "Warn", "Danger"] as const;
 const LEVEL_KEYS = { Normal: "normal", Warn: "warn", Danger: "danger" } as const;
 
-/** Reads <window>Bar<Level> (e.g. sessionBarWarn); falls back to the single set of colors older versions saved (barWarn). */
-function barPalette(settings: LimitsSettings): BarPalette {
+/**
+ * Colors are stored per display mode, because the same state reads the other way round: 90% used is 10% left.
+ * Used mode reads <window>Bar<Level> (e.g. sessionBarWarn), remaining mode reads <window>RemainBar<Level>.
+ * A missing remaining color falls back to the used-mode one, and that to the single set older versions saved (barWarn).
+ */
+function barPalette(settings: LimitsSettings, mode: ValueMode): BarPalette {
 	const colors = (which: "session" | "week"): BarColors => {
 		const out = { ...DEFAULT_BAR_COLORS };
 		for (const level of LEVELS) {
-			const value = settings[`${which}Bar${level}`] ?? settings[`bar${level}`];
-			if (value && HEX_COLOR.test(value)) out[LEVEL_KEYS[level]] = value;
+			const keys = [`${which}Bar${level}`, `bar${level}`];
+			if (mode === "remaining") keys.unshift(`${which}RemainBar${level}`);
+			const value = keys.map((key) => settings[key]).find((v) => v && HEX_COLOR.test(v));
+			if (value) out[LEVEL_KEYS[level]] = value;
 		}
 		return out;
 	};
@@ -106,7 +112,7 @@ export class LimitsAction extends SingletonAction<LimitsSettings> {
 			styles: textStyles(settings),
 			// "on" is the value older versions saved for the 残 tag.
 			remainTag: settings.remainTag === "off" ? "off" : settings.remainTag === "on" ? "zan" : "left",
-			barColors: barPalette(settings),
+			barColors: barPalette(settings, settings.valueMode ?? "used"),
 		});
 		if (this.#lastImage.get(id) === image) return;
 		this.#lastImage.set(id, image);
