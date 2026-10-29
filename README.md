@@ -10,7 +10,7 @@
 
 Shows how much of your Claude usage limits is left on a Stream Deck key: the session window (5 hours) and the weekly window (7 days), each with a bar and a countdown to its reset. Windows only.
 
-![Key faces: Session, Week, both windows, remaining mode, stale data and custom fonts](docs/keys.png)
+![Key faces: Session, Week, both windows, remaining mode, stale data, custom fonts and bar colors](docs/keys.png)
 
 > The images above are rendered with the same Qt SVG engine Stream Deck uses, with sample numbers.
 
@@ -18,9 +18,10 @@ Shows how much of your Claude usage limits is left on a Stream Deck key: the ses
 
 - **Session / Week** — one window per key: spark and label, a big percentage, a thin bar and the time until reset.
 - **Both** — Session and Week stacked on one key.
-- **Used / remaining** — show the used percentage (like the official usage page) or what is left; remaining mode adds a small 残 ("remaining") tag so the two cannot be confused. The tag can be changed to "Left" or switched off in the key's settings.
-- **Readable on the key** — everything is bold, the content stays inside an inner band so the bezel does not hide it, and the percentage turns amber from 70% and red from 90%.
+- **Used / remaining** — show the used percentage (like the official usage page) or what is left; remaining mode adds a small "Left" tag so the two cannot be confused. The tag can be changed to 残 or switched off in the key's settings.
+- **Readable on the key** — everything is bold, the content stays inside an inner band so the bezel does not hide it, and the bar turns amber from 70% and red from 90%.
 - **Fonts and sizes per element** — pick a font and a size (70–150%) separately for the header, the percentage and the countdown in the key's settings.
+- **Bar colors** — set the bar color for each level (below 70%, 70% and up, 90% and up) with color pickers in the key's settings.
 - **Clearly Claude** — an orange spark, drawn from scratch for this plugin, marks the key. The spark turns gray while the numbers shown are from the last successful fetch.
 - Press the key to refresh right away. Otherwise values are fetched every 5 minutes (backing off up to 30 minutes if the endpoint rate limits).
 
@@ -75,7 +76,7 @@ MIT
 
 Claude の利用枠の使用率を Stream Deck のキーに表示するプラグインです。Session(5時間枠)と Week(7日枠)について、バーとリセットまでの残り時間を表示します。Windows 専用です。
 
-![キー表示の例: Session、Week、両方、残量表示、古いデータ、フォント変更](docs/keys.png)
+![キー表示の例: Session、Week、両方、残量表示、古いデータ、フォント変更、バーの色](docs/keys.png)
 
 > 上の画像は、Stream Deck と同じ Qt の SVG エンジンで描画したものです(数値はサンプル)。
 
@@ -83,9 +84,10 @@ Claude の利用枠の使用率を Stream Deck のキーに表示するプラグ
 
 - **Session / Week** — 1キーに1つの枠を表示します。スパークとラベル、大きなパーセント、細いバー、リセットまでの時間が並びます。
 - **両方** — 1キーに Session と Week を2段で表示します。
-- **使用率 / 残量** — 公式の使用状況ページと同じ「使用率」と、「残量」を切り替えられます。残量表示では小さな「残」マークが付き、取り違えを防ぎます(キーの設定で「Left」への変更や非表示もできます)。
-- **実機で読みやすい** — 文字はすべて太字で、キーの縁に隠れないよう内側に収めています。パーセントは70%以上で黄、90%以上で赤になります。
+- **使用率 / 残量** — 公式の使用状況ページと同じ「使用率」と、「残量」を切り替えられます。残量表示では小さな「Left」マークが付き、取り違えを防ぎます(キーの設定で「残」への変更や非表示もできます)。
+- **実機で読みやすい** — 文字はすべて太字で、キーの縁に隠れないよう内側に収めています。バーは70%以上で黄、90%以上で赤になります。
 - **要素ごとのフォントと大きさ** — キーの設定で、見出し・パーセント・残り時間それぞれのフォントと大きさ(70〜150%)を選べます。
+- **バーの色** — 使用率が70%未満・70%以上・90%以上のときのバーの色を、キーの設定のカラーピッカーで変えられます。
 - **Claude だとひと目で分かる** — オレンジのスパーク(このプラグイン用に描き起こしたもの)が目印です。直前に取得した値を表示しているときは、スパークがグレーになります。
 - キーを押すとすぐ再取得します。通常は5分ごとに取得し、取得制限にかかったときは最大30分まで間隔を延ばします。
 

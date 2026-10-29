@@ -50,13 +50,21 @@ export const DEFAULT_TEXT_STYLES: TextStyles = { label: DEFAULT_STYLE, value: DE
 /** Tag next to the header in remaining mode: 残, Left, or none. */
 export type RemainTag = "zan" | "left" | "off";
 
+/** Bar colors for the three usage levels (below 70%, 70-89%, 90% and up). */
+export interface BarColors {
+	normal: string;
+	warn: string;
+	danger: string;
+}
+
 export interface RenderOptions {
 	metric: Metric;
 	valueMode: ValueMode;
 	now: number;
 	styles?: TextStyles;
-	/** Tag shown in remaining mode so it can't be mistaken for used-%. Defaults to "zan" (残). */
+	/** Tag shown in remaining mode so it can't be mistaken for used-%. Defaults to "left". */
 	remainTag?: RemainTag;
+	barColors?: BarColors;
 }
 
 const SIZE = 144;
@@ -74,11 +82,13 @@ export const COLORS = {
 	stale: "#77736a",
 };
 
+export const DEFAULT_BAR_COLORS: BarColors = { normal: COLORS.claude, warn: COLORS.warn, danger: COLORS.danger };
+
 /** Bar/accent color for a given used percentage: Claude orange while there is headroom, then amber, then red. */
-export function levelColor(utilization: number): string {
-	if (utilization >= 90) return COLORS.danger;
-	if (utilization >= 70) return COLORS.warn;
-	return COLORS.claude;
+export function levelColor(utilization: number, colors: BarColors = DEFAULT_BAR_COLORS): string {
+	if (utilization >= 90) return colors.danger;
+	if (utilization >= 70) return colors.warn;
+	return colors.normal;
 }
 
 /** "3h 33m", "2d 4h", "45m" until the reset time; "--" when the window has not started. */
@@ -159,16 +169,16 @@ function stylesOf(opts: RenderOptions): TextStyles {
 
 /** Small tag so a remaining-% reading can't be mistaken for used-%. "Left" is wider, so it is drawn smaller. */
 function modeTag(y: number, size: number, opts: RenderOptions): string {
-	const tag = opts.remainTag ?? "zan";
+	const tag = opts.remainTag ?? "left";
 	if (opts.valueMode !== "remaining" || tag === "off") return "";
 	const label = stylesOf(opts).label;
 	return tag === "left" ? text(label, RIGHT, y, Math.min(size, 14), COLORS.claude, "Left", "end") : text(label, RIGHT, y, size, COLORS.claude, "残", "end");
 }
 
-function thinBar(y: number, h: number, win: LimitWindow, value: number): string {
+function thinBar(y: number, h: number, win: LimitWindow, value: number, opts: RenderOptions): string {
 	return (
 		`<rect x="${LEFT}" y="${y}" width="${WIDTH}" height="${h}" rx="${h / 2}" fill="${COLORS.track}"/>` +
-		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization))
+		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization, opts.barColors))
 	);
 }
 
@@ -183,7 +193,7 @@ function renderSingle(label: string, win: LimitWindow | null, stale: boolean, op
 	return (
 		head +
 		text(st.value, 72, 78, 46, COLORS.text, `${value}<tspan font-size="${px(st.value, 26)}" fill="${COLORS.muted}">%</tspan>`, "middle") +
-		thinBar(89, 9, win, value) +
+		thinBar(89, 9, win, value, opts) +
 		text(st.countdown, 72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
 	);
 }
@@ -201,7 +211,7 @@ function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptio
 			// "100" is a digit wider; shrink it so it never runs into the countdown.
 			text(st.value, LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${px(st.value, value >= 100 ? 12 : 17)}" fill="${COLORS.muted}">%</tspan>`) +
 			text(st.countdown, RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
-			thinBar(y + 51, 7, win, value)
+			thinBar(y + 51, 7, win, value, opts)
 		);
 	};
 	return modeTag(22, 15, opts) + row(7, "Session", true, view.session) + row(67, "Week", false, view.week);

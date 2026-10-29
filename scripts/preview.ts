@@ -1,7 +1,7 @@
 // Writes dist/preview.html with every key layout/state at real (72px) and @2x (144px) size, for design checks.
 import fs from "node:fs";
 import path from "node:path";
-import { renderSvg, type KeyView, type Metric, type RemainTag, type TextStyles, type ValueMode } from "../src/render";
+import { renderSvg, type KeyView, type BarColors, type Metric, type RemainTag, type TextStyles, type ValueMode } from "../src/render";
 
 const now = Date.now();
 const min = 60000;
@@ -18,7 +18,7 @@ const big: TextStyles = {
 	countdown: { font: "bahnschrift-bold", scale: 1.2 },
 };
 
-const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles; remainTag?: RemainTag }[] = [
+const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles; remainTag?: RemainTag; barColors?: BarColors }[] = [
 	{ title: "Session 16%", view: sample(16, 92), metric: "session" },
 	{ title: "Week 92%", view: sample(16, 92), metric: "week" },
 	{ title: "両方", view: sample(16, 92), metric: "both" },
@@ -37,6 +37,8 @@ const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMo
 	{ title: "Session 残量表示(残マークなし)", view: sample(84, 46), metric: "session", valueMode: "remaining", remainTag: "off" },
 	{ title: "両方 残量表示(Left)", view: sample(84, 46), metric: "both", valueMode: "remaining", remainTag: "left" },
 	{ title: "Session 残量表示(Left)", view: sample(84, 46), metric: "session", valueMode: "remaining", remainTag: "left" },
+	{ title: "バーの色: カスタム", view: sample(84, 46), metric: "both", barColors: { normal: "#4fb3a9", warn: "#c58af9", danger: "#ff5d8f" } },
+	{ title: "バーの色: カスタム Session", view: sample(16, 46), metric: "session", barColors: { normal: "#4fb3a9", warn: "#c58af9", danger: "#ff5d8f" } },
 	{ title: "要ログイン", view: { kind: "message", title: "要ログイン", detail: "claude で再認証" }, metric: "session" },
 ];
 
@@ -45,14 +47,19 @@ const svgDir = path.join(__dirname, "svg");
 fs.rmSync(svgDir, { recursive: true, force: true });
 fs.mkdirSync(svgDir, { recursive: true });
 
+const files: Record<string, string> = {};
 const cells = cases
-	.map(({ title, view, metric, valueMode, styles, remainTag }, i) => {
-		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now, styles, remainTag });
-		fs.writeFileSync(path.join(svgDir, `${String(i).padStart(2, "0")}.svg`), svg);
+	.map(({ title, view, metric, valueMode, styles, remainTag, barColors }, i) => {
+		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now, styles, remainTag, barColors });
+		const file = `${String(i).padStart(2, "0")}.svg`;
+		fs.writeFileSync(path.join(svgDir, file), svg);
+		files[title] = file;
 		const url = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 		return `<figure><img src="${url}" width="72" height="72"><span class="g"><img src="${url}" width="144" height="144"></span><figcaption>${title}</figcaption></figure>`;
 	})
 	.join("\n");
+
+fs.writeFileSync(path.join(svgDir, "index.json"), JSON.stringify(files, null, 2));
 
 const html = `<!doctype html><meta charset="utf-8"><title>Key preview</title>
 <style>body{background:#111;color:#ccc;font-family:'Segoe UI',sans-serif;display:flex;flex-wrap:wrap;gap:20px;padding:20px}

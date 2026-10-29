@@ -10,6 +10,8 @@
 		.note { color:#9a9a9a; line-height:1.5; margin-top:14px; }
 		h2 { font-size:12px; font-weight:600; color:#cfcfcf; margin:18px 0 10px; padding-top:12px; border-top:1px solid #444; }
 		select.size { flex:0 0 72px; margin-left:6px; }
+		input[type=color] { flex:0 0 56px; height:28px; padding:2px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; }
+		.row .hint { margin-left:10px; color:#9a9a9a; }
 		button { background:#3a3a3a; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 10px; font-size:12px; cursor:pointer; }
 	</style>
 </head>
@@ -32,14 +34,19 @@
 	<div class="row">
 		<label for="remainTag">残量表示のマーク</label>
 		<select id="remainTag">
-			<option value="on">残</option>
 			<option value="left">Left</option>
+			<option value="on">残</option>
 			<option value="off">表示しない</option>
 		</select>
 	</div>
 	<h2>文字の見た目</h2>
 	<div id="textRows"></div>
 	<div class="row"><label></label><button id="resetText" type="button">標準に戻す</button></div>
+	<h2>バーの色</h2>
+	<div class="row"><label for="barNormal">70%未満</label><input type="color" id="barNormal" /></div>
+	<div class="row"><label for="barWarn">70%以上</label><input type="color" id="barWarn" /></div>
+	<div class="row"><label for="barDanger">90%以上</label><input type="color" id="barDanger" /></div>
+	<div class="row"><label></label><button id="resetColors" type="button">標準に戻す</button></div>
 	<div class="note">
 		Claude Code のログイン情報(~/.claude/.credentials.json)を使って5分ごとに取得します。キーを押すとすぐ更新します。<br />
 		スパークがグレーのときは前回取得した値を表示中です。<br />
@@ -67,11 +74,13 @@
 			["countdown", "残り時間"],
 		];
 
-		const DEFAULTS = { metric: "session", valueMode: "used", remainTag: "on" };
+		const DEFAULTS = { metric: "session", valueMode: "used", remainTag: "left" };
 		for (const [role] of ROLES) {
 			DEFAULTS[role + "Font"] = "segoe-bold";
 			DEFAULTS[role + "Size"] = "100";
 		}
+		// Bar colors for the three usage levels; must match DEFAULT_BAR_COLORS in src/render.ts.
+		Object.assign(DEFAULTS, { barNormal: "#d97757", barWarn: "#e8a33d", barDanger: "#ef574a" });
 		const FIELDS = Object.keys(DEFAULTS);
 
 		function buildTextRows() {
@@ -128,11 +137,17 @@
 			}
 
 			for (const field of FIELDS) document.getElementById(field).addEventListener("change", save);
-			document.getElementById("resetText").addEventListener("click", function () {
+			function resetFields(match) {
 				for (const field of FIELDS) {
-					if (field.endsWith("Font") || field.endsWith("Size")) document.getElementById(field).value = DEFAULTS[field];
+					if (match(field)) document.getElementById(field).value = DEFAULTS[field];
 				}
 				save();
+			}
+			document.getElementById("resetText").addEventListener("click", function () {
+				resetFields((field) => field.endsWith("Font") || field.endsWith("Size"));
+			});
+			document.getElementById("resetColors").addEventListener("click", function () {
+				resetFields((field) => field.startsWith("bar"));
 			});
 		}
 	</script>
