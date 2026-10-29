@@ -31,7 +31,8 @@ export const COLORS = {
 	bg: "#1f1e1c",
 	track: "#3a3835",
 	text: "#faf9f5",
-	muted: "#b7b3a8",
+	// Secondary text; kept bright since dimmer grays wash out on the physical key.
+	muted: "#d9d5cb",
 	claude: "#d97757",
 	warn: "#e8a33d",
 	danger: "#ef574a",
@@ -83,8 +84,9 @@ function esc(s: string): string {
 	return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function text(x: number, y: number, size: number, weight: number, fill: string, content: string, anchor = "start"): string {
-	return `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${content}</text>`;
+// Everything is bold: Qt renders weight 600 as regular, and regular strokes are too thin to read on the key's LCD.
+function text(x: number, y: number, size: number, fill: string, content: string, anchor = "start"): string {
+	return `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" font-weight="700" fill="${fill}" text-anchor="${anchor}">${content}</text>`;
 }
 
 function barFill(x: number, y: number, w: number, h: number, rx: number, ratio: number, color: string): string {
@@ -112,7 +114,7 @@ const WIDTH = RIGHT - LEFT;
 
 /** Small "残" tag so a remaining-% reading can't be mistaken for used-%. */
 function modeTag(y: number, size: number, opts: RenderOptions): string {
-	return opts.valueMode === "remaining" ? text(RIGHT, y, size, 700, COLORS.claude, "残", "end") : "";
+	return opts.valueMode === "remaining" ? text(RIGHT, y, size, COLORS.claude, "残", "end") : "";
 }
 
 function thinBar(y: number, h: number, win: LimitWindow, value: number): string {
@@ -124,14 +126,15 @@ function thinBar(y: number, h: number, win: LimitWindow, value: number): string 
 
 /** One metric on the whole key: header, big percentage, thin bar, countdown — each on its own line. */
 function renderSingle(label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
-	const head = spark(LEFT + 9, 23, 9, sparkColor(stale)) + text(LEFT + 23, 29, 18, 600, COLORS.muted, esc(label)) + modeTag(29, 16, opts);
-	if (!win) return head + text(72, 84, 40, 700, COLORS.muted, "--", "middle");
+	// Sized so "Session" still clears the "残" tag at the right edge.
+	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(LEFT + 20, 29, 18, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
+	if (!win) return head + text(72, 84, 40, COLORS.muted, "--", "middle");
 	const value = shownValue(win, opts.valueMode);
 	return (
 		head +
-		text(72, 78, 46, 700, COLORS.text, `${value}<tspan font-size="26" fill="${COLORS.muted}">%</tspan>`, "middle") +
+		text(72, 78, 46, COLORS.text, `${value}<tspan font-size="26" fill="${COLORS.muted}">%</tspan>`, "middle") +
 		thinBar(89, 9, win, value) +
-		text(72, 118, 19, 600, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
+		text(72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
 	);
 }
 
@@ -139,25 +142,25 @@ function renderSingle(label: string, win: LimitWindow | null, stale: boolean, op
 function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptions): string {
 	const row = (y: number, label: string, withSpark: boolean, win: LimitWindow | null): string => {
 		const labelX = withSpark ? LEFT + 16 : LEFT;
-		const head = (withSpark ? spark(LEFT + 6, y + 9, 6.5, sparkColor(view.stale)) : "") + text(labelX, y + 14, 15, 600, COLORS.muted, label);
-		if (!win) return head + text(LEFT, y + 44, 26, 700, COLORS.muted, "--");
+		const head = (withSpark ? spark(LEFT + 6, y + 9, 6.5, sparkColor(view.stale)) : "") + text(labelX, y + 15, 16, COLORS.muted, label);
+		if (!win) return head + text(LEFT, y + 44, 26, COLORS.muted, "--");
 		const value = shownValue(win, opts.valueMode);
 		return (
 			head +
 			// "100" is a digit wider; shrink it so it never runs into the countdown.
-			text(LEFT, y + 44, value >= 100 ? 23 : 28, 700, COLORS.text, `${value}<tspan font-size="${value >= 100 ? 14 : 17}" fill="${COLORS.muted}">%</tspan>`) +
-			text(RIGHT, y + 43, 15, 600, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
+			text(LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${value >= 100 ? 12 : 17}" fill="${COLORS.muted}">%</tspan>`) +
+			text(RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
 			thinBar(y + 51, 7, win, value)
 		);
 	};
-	return modeTag(21, 14, opts) + row(7, "Session", true, view.session) + row(67, "Week", false, view.week);
+	return modeTag(22, 15, opts) + row(7, "Session", true, view.session) + row(67, "Week", false, view.week);
 }
 
 function renderMessage(title: string, detail: string): string {
 	return (
 		spark(72, 36, 18, COLORS.claude) +
-		text(72, 87, 21, 700, COLORS.text, esc(title), "middle") +
-		text(72, 113, 16, 600, COLORS.muted, esc(detail), "middle")
+		text(72, 87, 21, COLORS.text, esc(title), "middle") +
+		text(72, 114, 17, COLORS.muted, esc(detail), "middle")
 	);
 }
 
