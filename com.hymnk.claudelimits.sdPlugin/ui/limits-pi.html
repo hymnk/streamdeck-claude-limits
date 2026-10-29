@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head lang="ja">
+	<meta charset="utf-8" />
+	<style>
+		body { background:#2d2d2d; color:#efefef; font-family: -apple-system, "Segoe UI", sans-serif; font-size:12px; margin:0; padding:12px 16px; }
+		.row { display:flex; align-items:center; margin-bottom:10px; }
+		label { width:110px; flex-shrink:0; }
+		select { flex:1; background:#111; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 6px; font-size:12px; }
+		.note { color:#9a9a9a; line-height:1.5; margin-top:14px; }
+	</style>
+</head>
+<body>
+	<div class="row">
+		<label for="metric">表示する枠</label>
+		<select id="metric">
+			<option value="session">Session(5時間)</option>
+			<option value="week">Week(7日間)</option>
+			<option value="both">両方(2段表示)</option>
+		</select>
+	</div>
+	<div class="row">
+		<label for="valueMode">パーセント</label>
+		<select id="valueMode">
+			<option value="used">使用率</option>
+			<option value="remaining">残量</option>
+		</select>
+	</div>
+	<div class="note">
+		Claude Code のログイン情報(~/.claude/.credentials.json)を使って5分ごとに取得します。キーを押すとすぐ更新します。<br />
+		スパークがグレーのときは前回取得した値を表示中です。
+	</div>
+
+	<script>
+		const DEFAULTS = { metric: "session", valueMode: "used" };
+
+		function applySettings(settings) {
+			settings = Object.assign({}, DEFAULTS, settings || {});
+			document.getElementById("metric").value = settings.metric;
+			document.getElementById("valueMode").value = settings.valueMode;
+		}
+
+		function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+			const actionInfo = JSON.parse(inActionInfo);
+			const ws = new WebSocket("ws://127.0.0.1:" + inPort);
+
+			ws.onopen = function () {
+				ws.send(JSON.stringify({ event: inRegisterEvent, uuid: inPropertyInspectorUUID }));
+				applySettings(actionInfo.payload && actionInfo.payload.settings);
+			};
+
+			ws.onmessage = function (evt) {
+				const data = JSON.parse(evt.data);
+				if (data.event === "didReceiveSettings") {
+					applySettings(data.payload.settings);
+				}
+			};
+
+			function save() {
+				if (ws.readyState !== WebSocket.OPEN) return;
+				ws.send(
+					JSON.stringify({
+						event: "setSettings",
+						context: inPropertyInspectorUUID,
+						payload: {
+							metric: document.getElementById("metric").value,
+							valueMode: document.getElementById("valueMode").value,
+						},
+					}),
+				);
+			}
+
+			document.getElementById("metric").addEventListener("change", save);
+			document.getElementById("valueMode").addEventListener("change", save);
+		}
+	</script>
+</body>
+</html>

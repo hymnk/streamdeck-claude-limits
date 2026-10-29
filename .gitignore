@@ -1,0 +1,5 @@
+node_modules/
+com.hymnk.claudelimits.sdPlugin/bin/
+com.hymnk.claudelimits.sdPlugin/logs/
+*.streamDeckPlugin
+dist/
