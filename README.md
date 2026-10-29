@@ -18,7 +18,7 @@ Shows how much of your Claude usage limits is left on a Stream Deck key: the ses
 
 - **Session / Week** — one window per key: spark and label, a big percentage, a thin bar and the time until reset.
 - **Both** — Session and Week stacked on one key.
-- **Used / remaining** — show the used percentage (like the official usage page) or what is left; remaining mode adds a small 残 ("remaining") tag so the two cannot be confused. The tag can be switched off in the key's settings.
+- **Used / remaining** — show the used percentage (like the official usage page) or what is left; remaining mode adds a small 残 ("remaining") tag so the two cannot be confused. The tag can be changed to "Left" or switched off in the key's settings.
 - **Readable on the key** — everything is bold, the content stays inside an inner band so the bezel does not hide it, and the percentage turns amber from 70% and red from 90%.
 - **Fonts and sizes per element** — pick a font and a size (70–150%) separately for the header, the percentage and the countdown in the key's settings.
 - **Clearly Claude** — an orange spark, drawn from scratch for this plugin, marks the key. The spark turns gray while the numbers shown are from the last successful fetch.
@@ -83,7 +83,7 @@ Claude の利用枠の使用率を Stream Deck のキーに表示するプラグ
 
 - **Session / Week** — 1キーに1つの枠を表示します。スパークとラベル、大きなパーセント、細いバー、リセットまでの時間が並びます。
 - **両方** — 1キーに Session と Week を2段で表示します。
-- **使用率 / 残量** — 公式の使用状況ページと同じ「使用率」と、「残量」を切り替えられます。残量表示では小さな「残」マークが付き、取り違えを防ぎます(キーの設定でオフにできます)。
+- **使用率 / 残量** — 公式の使用状況ページと同じ「使用率」と、「残量」を切り替えられます。残量表示では小さな「残」マークが付き、取り違えを防ぎます(キーの設定で「Left」への変更や非表示もできます)。
 - **実機で読みやすい** — 文字はすべて太字で、キーの縁に隠れないよう内側に収めています。パーセントは70%以上で黄、90%以上で赤になります。
 - **要素ごとのフォントと大きさ** — キーの設定で、見出し・パーセント・残り時間それぞれのフォントと大きさ(70〜150%)を選べます。
 - **Claude だとひと目で分かる** — オレンジのスパーク(このプラグイン用に描き起こしたもの)が目印です。直前に取得した値を表示しているときは、スパークがグレーになります。

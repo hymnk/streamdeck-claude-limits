@@ -47,13 +47,16 @@ export type TextStyles = Record<TextRole, TextStyle>;
 const DEFAULT_STYLE: TextStyle = { font: "segoe-bold", scale: 1 };
 export const DEFAULT_TEXT_STYLES: TextStyles = { label: DEFAULT_STYLE, value: DEFAULT_STYLE, countdown: DEFAULT_STYLE };
 
+/** Tag next to the header in remaining mode: 残, Left, or none. */
+export type RemainTag = "zan" | "left" | "off";
+
 export interface RenderOptions {
 	metric: Metric;
 	valueMode: ValueMode;
 	now: number;
 	styles?: TextStyles;
-	/** Show the small 残 tag in remaining mode. Defaults to true. */
-	showRemainTag?: boolean;
+	/** Tag shown in remaining mode so it can't be mistaken for used-%. Defaults to "zan" (残). */
+	remainTag?: RemainTag;
 }
 
 const SIZE = 144;
@@ -154,9 +157,12 @@ function stylesOf(opts: RenderOptions): TextStyles {
 	return opts.styles ?? DEFAULT_TEXT_STYLES;
 }
 
-/** Small "残" tag so a remaining-% reading can't be mistaken for used-%. */
+/** Small tag so a remaining-% reading can't be mistaken for used-%. "Left" is wider, so it is drawn smaller. */
 function modeTag(y: number, size: number, opts: RenderOptions): string {
-	return opts.valueMode === "remaining" && opts.showRemainTag !== false ? text(stylesOf(opts).label, RIGHT, y, size, COLORS.claude, "残", "end") : "";
+	const tag = opts.remainTag ?? "zan";
+	if (opts.valueMode !== "remaining" || tag === "off") return "";
+	const label = stylesOf(opts).label;
+	return tag === "left" ? text(label, RIGHT, y, Math.min(size, 14), COLORS.claude, "Left", "end") : text(label, RIGHT, y, size, COLORS.claude, "残", "end");
 }
 
 function thinBar(y: number, h: number, win: LimitWindow, value: number): string {
@@ -169,8 +175,9 @@ function thinBar(y: number, h: number, win: LimitWindow, value: number): string 
 /** One metric on the whole key: header, big percentage, thin bar, countdown — each on its own line. */
 function renderSingle(label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
 	const st = stylesOf(opts);
-	// Sized so "Session" still clears the "残" tag at the right edge.
-	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(st.label, LEFT + 20, 29, 18, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
+	// Sized so "Session" still clears the tag at the right edge ("Left" is wider than 残, so the label gives up a pixel).
+	const labelSize = opts.valueMode === "remaining" && opts.remainTag === "left" ? 17 : 18;
+	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(st.label, LEFT + 20, 29, labelSize, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
 	if (!win) return head + text(st.value, 72, 84, 40, COLORS.muted, "--", "middle");
 	const value = shownValue(win, opts.valueMode);
 	return (
