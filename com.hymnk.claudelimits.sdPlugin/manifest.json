@@ -2,6 +2,7 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "Claude Limits",
   "Author": "hymnk",
+  "URL": "https://github.com/hymnk/streamdeck-claude-limits",
   "Description": "Shows your Claude session (5-hour) and weekly usage limits with reset countdowns, using your Claude Code login.",
   "UUID": "com.hymnk.claudelimits",
   "Icon": "imgs/plugin/icon",
