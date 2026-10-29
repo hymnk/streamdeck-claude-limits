@@ -57,6 +57,9 @@ export interface BarColors {
 	danger: string;
 }
 
+/** Bar colors per window, so Session and Week can look different. */
+export type BarPalette = Record<"session" | "week", BarColors>;
+
 export interface RenderOptions {
 	metric: Metric;
 	valueMode: ValueMode;
@@ -64,7 +67,7 @@ export interface RenderOptions {
 	styles?: TextStyles;
 	/** Tag shown in remaining mode so it can't be mistaken for used-%. Defaults to "left". */
 	remainTag?: RemainTag;
-	barColors?: BarColors;
+	barColors?: BarPalette;
 }
 
 const SIZE = 144;
@@ -175,15 +178,19 @@ function modeTag(y: number, size: number, opts: RenderOptions): string {
 	return tag === "left" ? text(label, RIGHT, y, Math.min(size, 14), COLORS.claude, "Left", "end") : text(label, RIGHT, y, size, COLORS.claude, "残", "end");
 }
 
-function thinBar(y: number, h: number, win: LimitWindow, value: number, opts: RenderOptions): string {
+function colorsFor(opts: RenderOptions, which: "session" | "week"): BarColors {
+	return opts.barColors?.[which] ?? DEFAULT_BAR_COLORS;
+}
+
+function thinBar(y: number, h: number, win: LimitWindow, value: number, colors: BarColors): string {
 	return (
 		`<rect x="${LEFT}" y="${y}" width="${WIDTH}" height="${h}" rx="${h / 2}" fill="${COLORS.track}"/>` +
-		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization, opts.barColors))
+		barFill(LEFT, y, WIDTH, h, h / 2, value / 100, levelColor(win.utilization, colors))
 	);
 }
 
 /** One metric on the whole key: header, big percentage, thin bar, countdown — each on its own line. */
-function renderSingle(label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
+function renderSingle(which: "session" | "week", label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
 	const st = stylesOf(opts);
 	// Sized so "Session" still clears the tag at the right edge ("Left" is wider than 残, so the label gives up a pixel).
 	const labelSize = opts.valueMode === "remaining" && opts.remainTag === "left" ? 17 : 18;
@@ -193,7 +200,7 @@ function renderSingle(label: string, win: LimitWindow | null, stale: boolean, op
 	return (
 		head +
 		text(st.value, 72, 78, 46, COLORS.text, `${value}<tspan font-size="${px(st.value, 26)}" fill="${COLORS.muted}">%</tspan>`, "middle") +
-		thinBar(89, 9, win, value, opts) +
+		thinBar(89, 9, win, value, colorsFor(opts, which)) +
 		text(st.countdown, 72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
 	);
 }
@@ -201,7 +208,7 @@ function renderSingle(label: string, win: LimitWindow | null, stale: boolean, op
 /** Session and week stacked: label line, then % on the left with countdown on the right, then a thin bar. */
 function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptions): string {
 	const st = stylesOf(opts);
-	const row = (y: number, label: string, withSpark: boolean, win: LimitWindow | null): string => {
+	const row = (y: number, which: "session" | "week", label: string, withSpark: boolean, win: LimitWindow | null): string => {
 		const labelX = withSpark ? LEFT + 16 : LEFT;
 		const head = (withSpark ? spark(LEFT + 6, y + 9, 6.5, sparkColor(view.stale)) : "") + text(st.label, labelX, y + 15, 16, COLORS.muted, label);
 		if (!win) return head + text(st.value, LEFT, y + 44, 26, COLORS.muted, "--");
@@ -211,10 +218,10 @@ function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptio
 			// "100" is a digit wider; shrink it so it never runs into the countdown.
 			text(st.value, LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${px(st.value, value >= 100 ? 12 : 17)}" fill="${COLORS.muted}">%</tspan>`) +
 			text(st.countdown, RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
-			thinBar(y + 51, 7, win, value, opts)
+			thinBar(y + 51, 7, win, value, colorsFor(opts, which))
 		);
 	};
-	return modeTag(22, 15, opts) + row(7, "Session", true, view.session) + row(67, "Week", false, view.week);
+	return modeTag(22, 15, opts) + row(7, "session", "Session", true, view.session) + row(67, "week", "Week", false, view.week);
 }
 
 function renderMessage(title: string, detail: string): string {
@@ -234,9 +241,9 @@ export function renderSvg(view: KeyView, opts: RenderOptions): string {
 	} else if (opts.metric === "both") {
 		body = renderBoth(view, opts);
 	} else if (opts.metric === "session") {
-		body = renderSingle("Session", view.session, view.stale, opts);
+		body = renderSingle("session", "Session", view.session, view.stale, opts);
 	} else {
-		body = renderSingle("Week", view.week, view.stale, opts);
+		body = renderSingle("week", "Week", view.week, view.stale, opts);
 	}
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}"><rect width="${SIZE}" height="${SIZE}" fill="${COLORS.bg}"/>${body}</svg>`;
 }

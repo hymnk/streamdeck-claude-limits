@@ -10,9 +10,9 @@
 		.note { color:#9a9a9a; line-height:1.5; margin-top:14px; }
 		h2 { font-size:12px; font-weight:600; color:#cfcfcf; margin:18px 0 10px; padding-top:12px; border-top:1px solid #444; }
 		select.size { flex:0 0 72px; margin-left:6px; }
-		input[type=color] { flex:0 0 56px; height:28px; padding:2px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; }
-		.row .hint { margin-left:10px; color:#9a9a9a; }
-		button { background:#3a3a3a; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 10px; font-size:12px; cursor:pointer; }
+		.colors span { flex:0 0 56px; margin-right:8px; text-align:center; color:#9a9a9a; }
+		input[type=color] { flex:0 0 56px; margin-right:8px; height:28px; padding:2px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; }
+				button { background:#3a3a3a; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 10px; font-size:12px; cursor:pointer; }
 	</style>
 </head>
 <body>
@@ -43,9 +43,10 @@
 	<div id="textRows"></div>
 	<div class="row"><label></label><button id="resetText" type="button">標準に戻す</button></div>
 	<h2>バーの色</h2>
-	<div class="row"><label for="barNormal">70%未満</label><input type="color" id="barNormal" /></div>
-	<div class="row"><label for="barWarn">70%以上</label><input type="color" id="barWarn" /></div>
-	<div class="row"><label for="barDanger">90%以上</label><input type="color" id="barDanger" /></div>
+	<div class="row colors"><label></label><span>Session</span><span>Week</span></div>
+	<div class="row colors"><label>70%未満</label><input type="color" id="sessionBarNormal" /><input type="color" id="weekBarNormal" /></div>
+	<div class="row colors"><label>70%以上</label><input type="color" id="sessionBarWarn" /><input type="color" id="weekBarWarn" /></div>
+	<div class="row colors"><label>90%以上</label><input type="color" id="sessionBarDanger" /><input type="color" id="weekBarDanger" /></div>
 	<div class="row"><label></label><button id="resetColors" type="button">標準に戻す</button></div>
 	<div class="note">
 		Claude Code のログイン情報(~/.claude/.credentials.json)を使って5分ごとに取得します。キーを押すとすぐ更新します。<br />
@@ -79,8 +80,11 @@
 			DEFAULTS[role + "Font"] = "segoe-bold";
 			DEFAULTS[role + "Size"] = "100";
 		}
-		// Bar colors for the three usage levels; must match DEFAULT_BAR_COLORS in src/render.ts.
-		Object.assign(DEFAULTS, { barNormal: "#d97757", barWarn: "#e8a33d", barDanger: "#ef574a" });
+		// Bar colors per window and usage level; must match DEFAULT_BAR_COLORS in src/render.ts.
+		const BAR_DEFAULTS = { Normal: "#d97757", Warn: "#e8a33d", Danger: "#ef574a" };
+		for (const which of ["session", "week"]) {
+			for (const level of Object.keys(BAR_DEFAULTS)) DEFAULTS[which + "Bar" + level] = BAR_DEFAULTS[level];
+		}
 		const FIELDS = Object.keys(DEFAULTS);
 
 		function buildTextRows() {
@@ -105,7 +109,16 @@
 		buildTextRows();
 
 		function applySettings(settings) {
-			settings = Object.assign({}, DEFAULTS, settings || {});
+			settings = Object.assign({}, settings || {});
+			// Older versions saved one set of colors (barNormal...) for both windows.
+			for (const level of Object.keys(BAR_DEFAULTS)) {
+				const legacy = settings["bar" + level];
+				if (!legacy) continue;
+				for (const which of ["session", "week"]) {
+					if (!settings[which + "Bar" + level]) settings[which + "Bar" + level] = legacy;
+				}
+			}
+			settings = Object.assign({}, DEFAULTS, settings);
 			for (const field of FIELDS) document.getElementById(field).value = settings[field];
 		}
 
@@ -147,7 +160,7 @@
 				resetFields((field) => field.endsWith("Font") || field.endsWith("Size"));
 			});
 			document.getElementById("resetColors").addEventListener("click", function () {
-				resetFields((field) => field.startsWith("bar"));
+				resetFields((field) => field.includes("Bar"));
 			});
 		}
 	</script>

@@ -1,7 +1,7 @@
 // Writes dist/preview.html with every key layout/state at real (72px) and @2x (144px) size, for design checks.
 import fs from "node:fs";
 import path from "node:path";
-import { renderSvg, type KeyView, type BarColors, type Metric, type RemainTag, type TextStyles, type ValueMode } from "../src/render";
+import { renderSvg, type KeyView, type BarPalette, type Metric, type RemainTag, type TextStyles, type ValueMode } from "../src/render";
 
 const now = Date.now();
 const min = 60000;
@@ -18,7 +18,13 @@ const big: TextStyles = {
 	countdown: { font: "bahnschrift-bold", scale: 1.2 },
 };
 
-const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles; remainTag?: RemainTag; barColors?: BarColors }[] = [
+// Session and Week get their own colors.
+const customBars: BarPalette = {
+	session: { normal: "#4fb3a9", warn: "#c58af9", danger: "#ff5d8f" },
+	week: { normal: "#5b9bf5", warn: "#f0d44a", danger: "#ff7a3d" },
+};
+
+const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles; remainTag?: RemainTag; barColors?: BarPalette }[] = [
 	{ title: "Session 16%", view: sample(16, 92), metric: "session" },
 	{ title: "Week 92%", view: sample(16, 92), metric: "week" },
 	{ title: "両方", view: sample(16, 92), metric: "both" },
@@ -37,8 +43,9 @@ const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMo
 	{ title: "Session 残量表示(残マークなし)", view: sample(84, 46), metric: "session", valueMode: "remaining", remainTag: "off" },
 	{ title: "両方 残量表示(Left)", view: sample(84, 46), metric: "both", valueMode: "remaining", remainTag: "left" },
 	{ title: "Session 残量表示(Left)", view: sample(84, 46), metric: "session", valueMode: "remaining", remainTag: "left" },
-	{ title: "バーの色: カスタム", view: sample(84, 46), metric: "both", barColors: { normal: "#4fb3a9", warn: "#c58af9", danger: "#ff5d8f" } },
-	{ title: "バーの色: カスタム Session", view: sample(16, 46), metric: "session", barColors: { normal: "#4fb3a9", warn: "#c58af9", danger: "#ff5d8f" } },
+	{ title: "バーの色: カスタム", view: sample(84, 46), metric: "both", barColors: customBars },
+	{ title: "バーの色: カスタム Session", view: sample(16, 46), metric: "session", barColors: customBars },
+	{ title: "バーの色: カスタム Week", view: sample(16, 46), metric: "week", barColors: customBars },
 	{ title: "要ログイン", view: { kind: "message", title: "要ログイン", detail: "claude で再認証" }, metric: "session" },
 ];
 

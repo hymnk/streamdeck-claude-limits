@@ -6,7 +6,7 @@ import {
 	type WillAppearEvent,
 	type WillDisappearEvent,
 } from "@elgato/streamdeck";
-import { DEFAULT_BAR_COLORS, DEFAULT_TEXT_STYLES, FONTS, renderDataUrl, type BarColors, type FontId, type KeyView, type Metric, type TextRole, type TextStyles, type ValueMode } from "../render";
+import { DEFAULT_BAR_COLORS, DEFAULT_TEXT_STYLES, FONTS, renderDataUrl, type BarColors, type BarPalette, type FontId, type KeyView, type Metric, type TextRole, type TextStyles, type ValueMode } from "../render";
 import { usageStore } from "../usage";
 
 /** Per-element text settings are stored flat: labelFont / labelSize (percent as a string), and so on per role. */
@@ -18,13 +18,20 @@ export interface LimitsSettings {
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
-function barColors(settings: LimitsSettings): BarColors {
-	const pick = (value: string | undefined, fallback: string) => (value && HEX_COLOR.test(value) ? value : fallback);
-	return {
-		normal: pick(settings.barNormal, DEFAULT_BAR_COLORS.normal),
-		warn: pick(settings.barWarn, DEFAULT_BAR_COLORS.warn),
-		danger: pick(settings.barDanger, DEFAULT_BAR_COLORS.danger),
+const LEVELS = ["Normal", "Warn", "Danger"] as const;
+const LEVEL_KEYS = { Normal: "normal", Warn: "warn", Danger: "danger" } as const;
+
+/** Reads <window>Bar<Level> (e.g. sessionBarWarn); falls back to the single set of colors older versions saved (barWarn). */
+function barPalette(settings: LimitsSettings): BarPalette {
+	const colors = (which: "session" | "week"): BarColors => {
+		const out = { ...DEFAULT_BAR_COLORS };
+		for (const level of LEVELS) {
+			const value = settings[`${which}Bar${level}`] ?? settings[`bar${level}`];
+			if (value && HEX_COLOR.test(value)) out[LEVEL_KEYS[level]] = value;
+		}
+		return out;
 	};
+	return { session: colors("session"), week: colors("week") };
 }
 
 const ROLES: TextRole[] = ["label", "value", "countdown"];
@@ -99,7 +106,7 @@ export class LimitsAction extends SingletonAction<LimitsSettings> {
 			styles: textStyles(settings),
 			// "on" is the value older versions saved for the 残 tag.
 			remainTag: settings.remainTag === "off" ? "off" : settings.remainTag === "on" ? "zan" : "left",
-			barColors: barColors(settings),
+			barColors: barPalette(settings),
 		});
 		if (this.#lastImage.get(id) === image) return;
 		this.#lastImage.set(id, image);

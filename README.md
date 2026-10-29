@@ -21,7 +21,7 @@ Shows how much of your Claude usage limits is left on a Stream Deck key: the ses
 - **Used / remaining** — show the used percentage (like the official usage page) or what is left; remaining mode adds a small "Left" tag so the two cannot be confused. The tag can be changed to 残 or switched off in the key's settings.
 - **Readable on the key** — everything is bold, the content stays inside an inner band so the bezel does not hide it, and the bar turns amber from 70% and red from 90%.
 - **Fonts and sizes per element** — pick a font and a size (70–150%) separately for the header, the percentage and the countdown in the key's settings.
-- **Bar colors** — set the bar color for each level (below 70%, 70% and up, 90% and up) with color pickers in the key's settings.
+- **Bar colors** — set the bar color for each level (below 70%, 70% and up, 90% and up) separately for Session and Week, with color pickers in the key's settings.
 - **Clearly Claude** — an orange spark, drawn from scratch for this plugin, marks the key. The spark turns gray while the numbers shown are from the last successful fetch.
 - Press the key to refresh right away. Otherwise values are fetched every 5 minutes (backing off up to 30 minutes if the endpoint rate limits).
 
@@ -87,7 +87,7 @@ Claude の利用枠の使用率を Stream Deck のキーに表示するプラグ
 - **使用率 / 残量** — 公式の使用状況ページと同じ「使用率」と、「残量」を切り替えられます。残量表示では小さな「Left」マークが付き、取り違えを防ぎます(キーの設定で「残」への変更や非表示もできます)。
 - **実機で読みやすい** — 文字はすべて太字で、キーの縁に隠れないよう内側に収めています。バーは70%以上で黄、90%以上で赤になります。
 - **要素ごとのフォントと大きさ** — キーの設定で、見出し・パーセント・残り時間それぞれのフォントと大きさ(70〜150%)を選べます。
-- **バーの色** — 使用率が70%未満・70%以上・90%以上のときのバーの色を、キーの設定のカラーピッカーで変えられます。
+- **バーの色** — 使用率が70%未満・70%以上・90%以上のときのバーの色を、Session と Week で別々に、キーの設定のカラーピッカーで変えられます。
 - **Claude だとひと目で分かる** — オレンジのスパーク(このプラグイン用に描き起こしたもの)が目印です。直前に取得した値を表示しているときは、スパークがグレーになります。
 - キーを押すとすぐ再取得します。通常は5分ごとに取得し、取得制限にかかったときは最大30分まで間隔を延ばします。
 
