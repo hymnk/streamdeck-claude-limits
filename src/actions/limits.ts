@@ -6,13 +6,29 @@ import {
 	type WillAppearEvent,
 	type WillDisappearEvent,
 } from "@elgato/streamdeck";
-import { renderDataUrl, type KeyView, type Metric, type ValueMode } from "../render";
+import { DEFAULT_TEXT_STYLES, FONTS, renderDataUrl, type FontId, type KeyView, type Metric, type TextRole, type TextStyles, type ValueMode } from "../render";
 import { usageStore } from "../usage";
 
+/** Per-element text settings are stored flat: labelFont / labelSize (percent as a string), and so on per role. */
 export interface LimitsSettings {
 	metric?: Metric;
 	valueMode?: ValueMode;
 	[key: string]: string | undefined;
+}
+
+const ROLES: TextRole[] = ["label", "value", "countdown"];
+
+function textStyles(settings: LimitsSettings): TextStyles {
+	const styles = { ...DEFAULT_TEXT_STYLES };
+	for (const role of ROLES) {
+		const font = settings[`${role}Font`];
+		const size = Number(settings[`${role}Size`]);
+		styles[role] = {
+			font: font && font in FONTS ? (font as FontId) : DEFAULT_TEXT_STYLES[role].font,
+			scale: Number.isFinite(size) && size > 0 ? Math.min(160, Math.max(60, size)) / 100 : DEFAULT_TEXT_STYLES[role].scale,
+		};
+	}
+	return styles;
 }
 
 // Countdowns are shown to the minute, so redrawing twice a minute keeps them accurate without refetching.
@@ -69,6 +85,7 @@ export class LimitsAction extends SingletonAction<LimitsSettings> {
 			metric: settings.metric ?? "session",
 			valueMode: settings.valueMode ?? "used",
 			now: Date.now(),
+			styles: textStyles(settings),
 		});
 		if (this.#lastImage.get(id) === image) return;
 		this.#lastImage.set(id, image);

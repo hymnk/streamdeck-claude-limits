@@ -8,6 +8,9 @@
 		label { width:110px; flex-shrink:0; }
 		select { flex:1; background:#111; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 6px; font-size:12px; }
 		.note { color:#9a9a9a; line-height:1.5; margin-top:14px; }
+		h2 { font-size:12px; font-weight:600; color:#cfcfcf; margin:18px 0 10px; padding-top:12px; border-top:1px solid #444; }
+		select.size { flex:0 0 72px; margin-left:6px; }
+		button { background:#3a3a3a; color:#efefef; border:1px solid #555; border-radius:4px; padding:5px 10px; font-size:12px; cursor:pointer; }
 	</style>
 </head>
 <body>
@@ -26,18 +29,67 @@
 			<option value="remaining">残量</option>
 		</select>
 	</div>
+	<h2>文字の見た目</h2>
+	<div id="textRows"></div>
+	<div class="row"><label></label><button id="resetText" type="button">標準に戻す</button></div>
 	<div class="note">
 		Claude Code のログイン情報(~/.claude/.credentials.json)を使って5分ごとに取得します。キーを押すとすぐ更新します。<br />
-		スパークがグレーのときは前回取得した値を表示中です。
+		スパークがグレーのときは前回取得した値を表示中です。<br />
+		文字を大きくしすぎると、2段表示ではパーセントと残り時間が重なることがあります。
 	</div>
 
 	<script>
+		// Ids must match FONTS in src/render.ts.
+		const FONTS = [
+			["segoe-bold", "Segoe UI 太字(標準)"],
+			["segoe-semibold", "Segoe UI 中太"],
+			["segoe-black", "Segoe UI 極太"],
+			["segoe-regular", "Segoe UI 細字"],
+			["bahnschrift-bold", "Bahnschrift 太字(幅狭)"],
+			["bahnschrift-semibold", "Bahnschrift 中太(幅狭)"],
+			["meiryo-bold", "メイリオ 太字"],
+			["yugothic-bold", "游ゴシック UI 太字"],
+			["arial-bold", "Arial 太字"],
+			["verdana-bold", "Verdana 太字(幅広)"],
+		];
+		const SIZES = [70, 80, 90, 100, 110, 120, 130, 140, 150];
+		const ROLES = [
+			["label", "見出し"],
+			["value", "パーセント"],
+			["countdown", "残り時間"],
+		];
+
 		const DEFAULTS = { metric: "session", valueMode: "used" };
+		for (const [role] of ROLES) {
+			DEFAULTS[role + "Font"] = "segoe-bold";
+			DEFAULTS[role + "Size"] = "100";
+		}
+		const FIELDS = Object.keys(DEFAULTS);
+
+		function buildTextRows() {
+			const rows = document.getElementById("textRows");
+			for (const [role, name] of ROLES) {
+				const row = document.createElement("div");
+				row.className = "row";
+				const label = document.createElement("label");
+				label.textContent = name;
+				label.htmlFor = role + "Font";
+				const font = document.createElement("select");
+				font.id = role + "Font";
+				for (const [id, text] of FONTS) font.add(new Option(text, id));
+				const size = document.createElement("select");
+				size.id = role + "Size";
+				size.className = "size";
+				for (const n of SIZES) size.add(new Option(n + "%", String(n)));
+				row.append(label, font, size);
+				rows.append(row);
+			}
+		}
+		buildTextRows();
 
 		function applySettings(settings) {
 			settings = Object.assign({}, DEFAULTS, settings || {});
-			document.getElementById("metric").value = settings.metric;
-			document.getElementById("valueMode").value = settings.valueMode;
+			for (const field of FIELDS) document.getElementById(field).value = settings[field];
 		}
 
 		function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
@@ -62,16 +114,18 @@
 					JSON.stringify({
 						event: "setSettings",
 						context: inPropertyInspectorUUID,
-						payload: {
-							metric: document.getElementById("metric").value,
-							valueMode: document.getElementById("valueMode").value,
-						},
+						payload: Object.fromEntries(FIELDS.map((field) => [field, document.getElementById(field).value])),
 					}),
 				);
 			}
 
-			document.getElementById("metric").addEventListener("change", save);
-			document.getElementById("valueMode").addEventListener("change", save);
+			for (const field of FIELDS) document.getElementById(field).addEventListener("change", save);
+			document.getElementById("resetText").addEventListener("click", function () {
+				for (const field of FIELDS) {
+					if (field.endsWith("Font") || field.endsWith("Size")) document.getElementById(field).value = DEFAULTS[field];
+				}
+				save();
+			});
 		}
 	</script>
 </body>

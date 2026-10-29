@@ -16,16 +16,45 @@ export type KeyView =
 	| { kind: "message"; title: string; detail: string }
 	| { kind: "usage"; session: LimitWindow | null; week: LimitWindow | null; stale: boolean };
 
+/**
+ * Fonts offered per text element. Each is a single family on purpose: Stream Deck renders with Qt SVG, which does
+ * not understand CSS font-family lists and silently falls back to a much wider font when given one. Qt also only
+ * picks regular or bold within a family, so the in-between weights are separate families (e.g. "Segoe UI Semibold").
+ */
+export const FONTS = {
+	"segoe-bold": { family: "Segoe UI", weight: 700 },
+	"segoe-semibold": { family: "Segoe UI Semibold", weight: 400 },
+	"segoe-black": { family: "Segoe UI Black", weight: 400 },
+	"segoe-regular": { family: "Segoe UI", weight: 400 },
+	"bahnschrift-bold": { family: "Bahnschrift", weight: 700 },
+	"bahnschrift-semibold": { family: "Bahnschrift SemiBold", weight: 400 },
+	"meiryo-bold": { family: "Meiryo", weight: 700 },
+	"yugothic-bold": { family: "Yu Gothic UI", weight: 700 },
+	"arial-bold": { family: "Arial", weight: 700 },
+	"verdana-bold": { family: "Verdana", weight: 700 },
+} as const;
+export type FontId = keyof typeof FONTS;
+
+/** Header label (Session/Week and the 残 tag), the big percentage, and the reset countdown. */
+export type TextRole = "label" | "value" | "countdown";
+export interface TextStyle {
+	font: FontId;
+	/** Multiplier on the layout's built-in size, 1 = default. */
+	scale: number;
+}
+export type TextStyles = Record<TextRole, TextStyle>;
+
+const DEFAULT_STYLE: TextStyle = { font: "segoe-bold", scale: 1 };
+export const DEFAULT_TEXT_STYLES: TextStyles = { label: DEFAULT_STYLE, value: DEFAULT_STYLE, countdown: DEFAULT_STYLE };
+
 export interface RenderOptions {
 	metric: Metric;
 	valueMode: ValueMode;
 	now: number;
+	styles?: TextStyles;
 }
 
 const SIZE = 144;
-// A single family on purpose: Stream Deck renders with Qt SVG, which does not understand CSS font-family lists
-// and silently falls back to a much wider font when given one.
-const FONT = "Segoe UI";
 
 export const COLORS = {
 	bg: "#1f1e1c",
@@ -84,9 +113,16 @@ function esc(s: string): string {
 	return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Everything is bold: Qt renders weight 600 as regular, and regular strokes are too thin to read on the key's LCD.
-function text(x: number, y: number, size: number, fill: string, content: string, anchor = "start"): string {
-	return `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" font-weight="700" fill="${fill}" text-anchor="${anchor}">${content}</text>`;
+/** Font size for a style, given the layout's default size. */
+function px(style: TextStyle, size: number): number {
+	return Math.round(size * style.scale * 10) / 10;
+}
+
+// Sizes are the layout defaults; the style scales them. The default font is bold, since regular strokes are too
+// thin to read on the key's LCD.
+function text(style: TextStyle, x: number, y: number, size: number, fill: string, content: string, anchor = "start"): string {
+	const { family, weight } = FONTS[style.font];
+	return `<text x="${x}" y="${y}" font-family="${family}" font-size="${px(style, size)}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${content}</text>`;
 }
 
 function barFill(x: number, y: number, w: number, h: number, rx: number, ratio: number, color: string): string {
@@ -112,9 +148,13 @@ const LEFT = 18;
 const RIGHT = 126;
 const WIDTH = RIGHT - LEFT;
 
+function stylesOf(opts: RenderOptions): TextStyles {
+	return opts.styles ?? DEFAULT_TEXT_STYLES;
+}
+
 /** Small "残" tag so a remaining-% reading can't be mistaken for used-%. */
 function modeTag(y: number, size: number, opts: RenderOptions): string {
-	return opts.valueMode === "remaining" ? text(RIGHT, y, size, COLORS.claude, "残", "end") : "";
+	return opts.valueMode === "remaining" ? text(stylesOf(opts).label, RIGHT, y, size, COLORS.claude, "残", "end") : "";
 }
 
 function thinBar(y: number, h: number, win: LimitWindow, value: number): string {
@@ -126,30 +166,32 @@ function thinBar(y: number, h: number, win: LimitWindow, value: number): string 
 
 /** One metric on the whole key: header, big percentage, thin bar, countdown — each on its own line. */
 function renderSingle(label: string, win: LimitWindow | null, stale: boolean, opts: RenderOptions): string {
+	const st = stylesOf(opts);
 	// Sized so "Session" still clears the "残" tag at the right edge.
-	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(LEFT + 20, 29, 18, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
-	if (!win) return head + text(72, 84, 40, COLORS.muted, "--", "middle");
+	const head = spark(LEFT + 8, 23, 8, sparkColor(stale)) + text(st.label, LEFT + 20, 29, 18, COLORS.muted, esc(label)) + modeTag(29, 17, opts);
+	if (!win) return head + text(st.value, 72, 84, 40, COLORS.muted, "--", "middle");
 	const value = shownValue(win, opts.valueMode);
 	return (
 		head +
-		text(72, 78, 46, COLORS.text, `${value}<tspan font-size="26" fill="${COLORS.muted}">%</tspan>`, "middle") +
+		text(st.value, 72, 78, 46, COLORS.text, `${value}<tspan font-size="${px(st.value, 26)}" fill="${COLORS.muted}">%</tspan>`, "middle") +
 		thinBar(89, 9, win, value) +
-		text(72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
+		text(st.countdown, 72, 120, 22, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "middle")
 	);
 }
 
 /** Session and week stacked: label line, then % on the left with countdown on the right, then a thin bar. */
 function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptions): string {
+	const st = stylesOf(opts);
 	const row = (y: number, label: string, withSpark: boolean, win: LimitWindow | null): string => {
 		const labelX = withSpark ? LEFT + 16 : LEFT;
-		const head = (withSpark ? spark(LEFT + 6, y + 9, 6.5, sparkColor(view.stale)) : "") + text(labelX, y + 15, 16, COLORS.muted, label);
-		if (!win) return head + text(LEFT, y + 44, 26, COLORS.muted, "--");
+		const head = (withSpark ? spark(LEFT + 6, y + 9, 6.5, sparkColor(view.stale)) : "") + text(st.label, labelX, y + 15, 16, COLORS.muted, label);
+		if (!win) return head + text(st.value, LEFT, y + 44, 26, COLORS.muted, "--");
 		const value = shownValue(win, opts.valueMode);
 		return (
 			head +
 			// "100" is a digit wider; shrink it so it never runs into the countdown.
-			text(LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${value >= 100 ? 12 : 17}" fill="${COLORS.muted}">%</tspan>`) +
-			text(RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
+			text(st.value, LEFT, y + 44, value >= 100 ? 21 : 28, COLORS.text, `${value}<tspan font-size="${px(st.value, value >= 100 ? 12 : 17)}" fill="${COLORS.muted}">%</tspan>`) +
+			text(st.countdown, RIGHT, y + 43, 15, COLORS.muted, esc(formatCountdown(win.resetsAt, opts.now)), "end") +
 			thinBar(y + 51, 7, win, value)
 		);
 	};
@@ -159,8 +201,8 @@ function renderBoth(view: Extract<KeyView, { kind: "usage" }>, opts: RenderOptio
 function renderMessage(title: string, detail: string): string {
 	return (
 		spark(72, 36, 18, COLORS.claude) +
-		text(72, 87, 21, COLORS.text, esc(title), "middle") +
-		text(72, 114, 17, COLORS.muted, esc(detail), "middle")
+		text(DEFAULT_STYLE, 72, 87, 21, COLORS.text, esc(title), "middle") +
+		text(DEFAULT_STYLE, 72, 114, 17, COLORS.muted, esc(detail), "middle")
 	);
 }
 

@@ -1,7 +1,7 @@
 // Writes dist/preview.html with every key layout/state at real (72px) and @2x (144px) size, for design checks.
 import fs from "node:fs";
 import path from "node:path";
-import { renderSvg, type KeyView, type Metric, type ValueMode } from "../src/render";
+import { renderSvg, type KeyView, type Metric, type TextStyles, type ValueMode } from "../src/render";
 
 const now = Date.now();
 const min = 60000;
@@ -12,7 +12,13 @@ const sample = (s: number, w: number, stale = false): KeyView => ({
 	stale,
 });
 
-const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode }[] = [
+const big: TextStyles = {
+	label: { font: "segoe-black", scale: 1.2 },
+	value: { font: "bahnschrift-bold", scale: 1.1 },
+	countdown: { font: "bahnschrift-bold", scale: 1.2 },
+};
+
+const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles }[] = [
 	{ title: "Session 16%", view: sample(16, 92), metric: "session" },
 	{ title: "Week 92%", view: sample(16, 92), metric: "week" },
 	{ title: "両方", view: sample(16, 92), metric: "both" },
@@ -24,6 +30,9 @@ const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMo
 	{ title: "Session 未開始", view: { ...sample(0, 30), session: { utilization: 0, resetsAt: null } }, metric: "session" },
 	{ title: "古いデータ", view: sample(55, 60, true), metric: "both" },
 	{ title: "読み込み中", view: { kind: "loading" }, metric: "session" },
+	{ title: "文字設定: 大きめ", view: sample(84, 46), metric: "session", styles: big },
+	{ title: "文字設定: 大きめ 両方", view: sample(84, 46), metric: "both", valueMode: "remaining", styles: big },
+	{ title: "文字設定: メイリオ 120%", view: sample(84, 46), metric: "both", styles: { label: { font: "meiryo-bold", scale: 1.2 }, value: { font: "meiryo-bold", scale: 1 }, countdown: { font: "meiryo-bold", scale: 1.2 } } },
 	{ title: "要ログイン", view: { kind: "message", title: "要ログイン", detail: "claude で再認証" }, metric: "session" },
 ];
 
@@ -33,8 +42,8 @@ fs.rmSync(svgDir, { recursive: true, force: true });
 fs.mkdirSync(svgDir, { recursive: true });
 
 const cells = cases
-	.map(({ title, view, metric, valueMode }, i) => {
-		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now });
+	.map(({ title, view, metric, valueMode, styles }, i) => {
+		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now, styles });
 		fs.writeFileSync(path.join(svgDir, `${String(i).padStart(2, "0")}.svg`), svg);
 		const url = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 		return `<figure><img src="${url}" width="72" height="72"><span class="g"><img src="${url}" width="144" height="144"></span><figcaption>${title}</figcaption></figure>`;
