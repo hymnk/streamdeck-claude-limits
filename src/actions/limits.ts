@@ -86,6 +86,7 @@ export class LimitsAction extends SingletonAction<LimitsSettings> {
 			valueMode: settings.valueMode ?? "used",
 			now: Date.now(),
 			styles: textStyles(settings),
+			showRemainTag: settings.remainTag !== "off",
 		});
 		if (this.#lastImage.get(id) === image) return;
 		this.#lastImage.set(id, image);

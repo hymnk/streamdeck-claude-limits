@@ -18,7 +18,7 @@ const big: TextStyles = {
 	countdown: { font: "bahnschrift-bold", scale: 1.2 },
 };
 
-const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles }[] = [
+const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMode; styles?: TextStyles; showRemainTag?: boolean }[] = [
 	{ title: "Session 16%", view: sample(16, 92), metric: "session" },
 	{ title: "Week 92%", view: sample(16, 92), metric: "week" },
 	{ title: "両方", view: sample(16, 92), metric: "both" },
@@ -33,6 +33,8 @@ const cases: { title: string; view: KeyView; metric: Metric; valueMode?: ValueMo
 	{ title: "文字設定: 大きめ", view: sample(84, 46), metric: "session", styles: big },
 	{ title: "文字設定: 大きめ 両方", view: sample(84, 46), metric: "both", valueMode: "remaining", styles: big },
 	{ title: "文字設定: メイリオ 120%", view: sample(84, 46), metric: "both", styles: { label: { font: "meiryo-bold", scale: 1.2 }, value: { font: "meiryo-bold", scale: 1 }, countdown: { font: "meiryo-bold", scale: 1.2 } } },
+	{ title: "両方 残量表示(残マークなし)", view: sample(84, 46), metric: "both", valueMode: "remaining", showRemainTag: false },
+	{ title: "Session 残量表示(残マークなし)", view: sample(84, 46), metric: "session", valueMode: "remaining", showRemainTag: false },
 	{ title: "要ログイン", view: { kind: "message", title: "要ログイン", detail: "claude で再認証" }, metric: "session" },
 ];
 
@@ -42,8 +44,8 @@ fs.rmSync(svgDir, { recursive: true, force: true });
 fs.mkdirSync(svgDir, { recursive: true });
 
 const cells = cases
-	.map(({ title, view, metric, valueMode, styles }, i) => {
-		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now, styles });
+	.map(({ title, view, metric, valueMode, styles, showRemainTag }, i) => {
+		const svg = renderSvg(view, { metric, valueMode: valueMode ?? "used", now, styles, showRemainTag });
 		fs.writeFileSync(path.join(svgDir, `${String(i).padStart(2, "0")}.svg`), svg);
 		const url = `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 		return `<figure><img src="${url}" width="72" height="72"><span class="g"><img src="${url}" width="144" height="144"></span><figcaption>${title}</figcaption></figure>`;

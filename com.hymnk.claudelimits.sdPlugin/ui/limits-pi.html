@@ -29,6 +29,13 @@
 			<option value="remaining">残量</option>
 		</select>
 	</div>
+	<div class="row">
+		<label for="remainTag">「残」マーク</label>
+		<select id="remainTag">
+			<option value="on">表示する(残量表示のとき)</option>
+			<option value="off">表示しない</option>
+		</select>
+	</div>
 	<h2>文字の見た目</h2>
 	<div id="textRows"></div>
 	<div class="row"><label></label><button id="resetText" type="button">標準に戻す</button></div>
@@ -59,7 +66,7 @@
 			["countdown", "残り時間"],
 		];
 
-		const DEFAULTS = { metric: "session", valueMode: "used" };
+		const DEFAULTS = { metric: "session", valueMode: "used", remainTag: "on" };
 		for (const [role] of ROLES) {
 			DEFAULTS[role + "Font"] = "segoe-bold";
 			DEFAULTS[role + "Size"] = "100";

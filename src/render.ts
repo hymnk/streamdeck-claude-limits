@@ -52,6 +52,8 @@ export interface RenderOptions {
 	valueMode: ValueMode;
 	now: number;
 	styles?: TextStyles;
+	/** Show the small 残 tag in remaining mode. Defaults to true. */
+	showRemainTag?: boolean;
 }
 
 const SIZE = 144;
@@ -154,7 +156,7 @@ function stylesOf(opts: RenderOptions): TextStyles {
 
 /** Small "残" tag so a remaining-% reading can't be mistaken for used-%. */
 function modeTag(y: number, size: number, opts: RenderOptions): string {
-	return opts.valueMode === "remaining" ? text(stylesOf(opts).label, RIGHT, y, size, COLORS.claude, "残", "end") : "";
+	return opts.valueMode === "remaining" && opts.showRemainTag !== false ? text(stylesOf(opts).label, RIGHT, y, size, COLORS.claude, "残", "end") : "";
 }
 
 function thinBar(y: number, h: number, win: LimitWindow, value: number): string {
